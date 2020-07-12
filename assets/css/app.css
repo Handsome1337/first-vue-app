@@ -8,4 +8,13 @@ body {
 
 .cart {
   padding: 20px 50px;
-} 
+}
+
+.verify {
+  margin-top: 20px;
+}
+
+.submit {
+  margin-top:20px;
+  float: right;
+}
