@@ -9,57 +9,88 @@
   <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
     crossorigin="anonymous">
   <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"></script>
 </head>
 <body>
-  <div id="app">
-    <header>
-      <div class="navbar navbar-light bg-light border border-dark rounded mb-4">
-        <div class="float-md-left">
-          <h1 v-text="sitename"></h1>
-        </div>
-        <div class="nav navbar-nav ml-auto cart">
-          <button
-            type="button"
-            class="btn btn-secondary btn-lg"
-            v-on:click="showCheckout"
-          >
-            <span class="fa fa-shopping-cart">
-              {{ cartItemCount }}
-            </span>
-            Checkout
-          </button>
-        </div>
-      </div>
-    </header>
-    <main>
-      <div class="container">
-        <div v-if="showProduct" class="row">
-          <div class="col-md-2 offset-md-1">
-            <figure>
-              <img v-bind:src="product.image">
-            </figure>
+  <div class="container">
+    <div id="app">
+      <header>
+        <div class="navbar navbar-light bg-light border border-dark rounded mb-4">
+          <div class="float-md-left">
+            <h1 v-text="sitename"></h1>
           </div>
-          <div class="col-md-6 offset-md-2">
-            <h1 v-text="product.title"></h1>
-            <p v-html="product.description"></p>
-            <p>
-              {{ product.price | formatPrice }}
-            </p>
+          <div class="nav navbar-nav ml-auto cart">
             <button
-              class="btn btn-primary btn-lg"
-              v-on:click="addToCart"
-              v-if="canAddToCart"
+              type="button"
+              class="btn btn-secondary btn-lg"
+              v-on:click="showCheckout"
             >
-              Add to cart
+              <span class="fa fa-shopping-cart">
+                {{ cartItemCount }}
+              </span>
+              Checkout
             </button>
-            <button
-              class="btn btn-primary btn-lg"
-              disabled
-              v-else
+          </div>
+        </div>
+      </header>
+      <main>
+        <div v-if="showProduct">
+          <div 
+            class="row product align-items-center"
+            v-for="product in sortedProducts"
             >
-              Add to cart
-            </button>
-          </div>          
+            <div class="col-md-5 offset-md-0">
+              <figure>
+                <img class="product" v-bind:src="product.image">
+              </figure>
+            </div>
+            <div class="col-md-6 offset-md-0 description">
+              <h1 v-text="product.title"></h1>
+              <p v-html="product.description"></p>
+              <p>
+                {{ product.price | formatPrice }}
+              </p>
+              <button
+                class="btn btn-primary btn-lg"
+                v-on:click="addToCart(product)"
+                v-if="canAddToCart(product)"
+              >
+                Add to cart
+              </button>
+              <button
+                class="btn btn-primary btn-lg"
+                disabled
+                v-else
+              >
+                Add to cart
+              </button>
+              <span
+                class="inventory-message"
+                v-if="product.availableInventory - cartCount(product.id) === 0"
+              >
+                All out!
+              </span>
+              <span
+                class="inventory-message"
+                v-else-if="product.availableInventory - cartCount(product.id) < 5"
+              >
+                Only {{product.availableInventory - cartCount(product.id)}} left!
+              </span>
+              <span
+                class="inventory-message"
+                v-else>
+                Buy now!
+              </span>
+              <div class="rating">
+                <span 
+                  v-bind:class="{'rating-active' : checkRating(n, product)}"
+                  v-for="n in 5">
+                    ☆
+                </span>
+              </div>
+            </div>
+            </hr>
+          </div>
         </div>
         <div v-else class="row">
           <div class="col-md-10 offset-md-1">
@@ -123,7 +154,7 @@
                       class="form-control"
                     />
                   </div>
-                  <div class="form-group col-md-6">
+                  <div class="form-group col-md-6 boxes">
                     <input
                       type="checkbox" 
                       id="gift"
@@ -134,7 +165,7 @@
                     />
                     <label for="gift">Ship As Gift?</label>
                   </div>
-                  <div class="form-group col-md-6">
+                  <div class="form-group col-md-6 boxes">
                     <input
                       type="radio"
                       id="home"
@@ -176,23 +207,14 @@
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
-
   <script type="text/javascript">
     const webstore = new Vue({
       el: '#app',
       data: {
         sitename: 'Vue.js Pet Depot',
-        product: {
-          id: 1001,
-          title: 'Cat Food, 25lb bag',
-          description: 'A 25 pound bag of <em>irresistible</em>,' +	' organic goodness for your cat.',
-          price: 2000,
-          image: 'assets/images/product-fullsize.png',
-          availableInventory: 5
-        },
         showProduct: true,
         order: {
           firstName: '',
@@ -208,6 +230,7 @@
           sendGift: 'Send As A Gift',
           dontSendGift: 'Do Not Send As A Gift'
         },
+        products: [],
         states: {
           AL: 'Alabama',
           AR: 'Arizona',
@@ -220,8 +243,18 @@
         cartItemCount: function() {
           return this.cart.length || '';
         },
-        canAddToCart: function() {
-          return this.product.availableInventory > this.cartItemCount;
+        sortedProducts: function() {
+          if (this.products.length > 0) {
+            const productsArray = this.products.slice(0);
+            function compare(a, b) {
+              if (a.title.toLowerCase() < b.title.toLowerCase())
+                return -1;
+              if (a.title.toLowerCase() > b.title.toLowerCase())
+                return 1;
+              return 0;
+            }
+            return productsArray.sort(compare);
+          }
         }
       },
       filters: {
@@ -241,15 +274,36 @@
           }
         }
       },
+      created: function() {
+        axios.get('./products.json')
+          .then((response) => {
+            this.products = response.data.products;
+          });
+      },
       methods: {
-        addToCart: function() {
-          this.cart.push(this.product.id);
+        addToCart: function(aProduct) {
+          this.cart.push(aProduct.id);
+        },        
+        canAddToCart(aProduct) {
+          return aProduct.availableInventory > this.cartCount(aProduct.id);
+        },
+        cartCount(id) {
+          let count = 0;
+          for (let i = 0; i < this.cart.length; i++) {
+            if (this.cart[i] === id) {
+              count++;
+            }
+          }
+          return count;
         },
         showCheckout() {
           this.showProduct = this.showProduct ? false : true;
         },
         submitForm() {
           alert('Submitted');
+        },
+        checkRating(n, myProduct) {
+          return myProduct.rating - n >= 0;
         }
       }
     });
