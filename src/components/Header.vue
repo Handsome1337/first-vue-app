@@ -9,10 +9,15 @@
         </h1>
       </div>
       <div class="nav navbar-nav ml-auto cart">
-        <button type="button" class="btn btn-secondary btn-lg" v-on:click="showCheckout">
+        <router-link
+          active-class="active"
+          tag="button"
+          class="btn btn-secondary btn-lg"
+          :to="{name: 'Form'}"
+        >
           <span class="fa fa-shopping-cart">{{ cartItemCount }}</span>
           Checkout
-        </button>
+        </router-link>
       </div>
     </div>
   </header>
@@ -26,12 +31,7 @@
         sitename: "Vue.js Pet Depot"
       }
     },
-    props: ['cartItemCount'],
-    methods: {
-      showCheckout() {
-        this.$router.push({name: 'Form'});
-      }
-    }
+    props: ['cartItemCount']
   }
 </script>
 
@@ -39,5 +39,9 @@
   a {
     text-decoration: none;
     color: black;
+  }
+  
+  .router-link-exact-active {
+    color: yellowgreen !important;
   }
 </style>
