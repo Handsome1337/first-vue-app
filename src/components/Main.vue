@@ -64,15 +64,18 @@
 
 <script>
 import MyHeader from './Header.vue';
+import {mapGetters} from 'vuex';
 export default {
   name: 'imain',
   data() {
     return {
-      products: {},
       cart: []
     };
   },  
   computed: {
+    ...mapGetters([
+      'products'
+    ]),
     cartItemCount: function() {
       return this.cart.length || '';
     },
@@ -129,10 +132,7 @@ export default {
     }
   },
   created: function() {
-    axios.get('products.json')
-      .then((response) => {
-        this.products = response.data.products;
-      });
+    this.$store.dispatch('initStore')
   }
 };
 </script>
